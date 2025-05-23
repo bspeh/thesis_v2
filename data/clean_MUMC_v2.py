@@ -61,7 +61,7 @@ selected_columns = [
     "In rapportering org.?", "Minuten afwijkend", "Minuten onderplanning", "Minuten overplanning", "Vertragingsreden"
 ]
 """
-selected_columns = ["Datum", "Dag vd week", "Naam patiënt", "Hoofdchirurg/zorgverlener", "Specialisme", "Kamer", "Verrichtingen", "In kamer", "Start verr.", "Verr. afger.", "Uit kamer" ,"Duur kamer", "Duur verr.", "Patiëntleeftijd op verrichtingsdatum", "Patiëntklasse", "Minuten overplanning" ,"Minuten onderplanning", "Primair anest.type"]
+selected_columns = ["Datum", "Dag vd week", "Naam patiënt", "Hoofdchirurg/zorgverlener", "Specialisme", "Kamer", "Verrichtingen", "In kamer", "Start verr.", "Verr. afger.", "Uit kamer" ,"Duur kamer", "Duur verr.", "Patiëntleeftijd op verrichtingsdatum", "Patiëntklasse", "Minuten overplanning" ,"Minuten onderplanning", "Primair anest.type", "Over-/onderplanning"]
 
 df = df[selected_columns].copy()
 

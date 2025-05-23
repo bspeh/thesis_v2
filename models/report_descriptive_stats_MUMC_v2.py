@@ -17,6 +17,7 @@ from statsmodels.stats.descriptivestats import describe
 # from statsmodels.stats.multicomp import pairwise_tukeyhsd
 from statsmodels.stats.multicomp import MultiComparison
 import scikit_posthocs as sp
+import scienceplots
 
 
 # --------------------------------------------------
@@ -28,6 +29,7 @@ pd.set_option('display.max_rows', None)
 pd.set_option('display.width', None)
 
 # target_col = 'absolute_perc_dev'
+# target_col = 'test_perc_dev'
 target_col = 'perc_dev'
 # target_col = 'deviation'
 csv_path = "/Users/bennet/Desktop/thesis/data/clean_MUMC_v4.csv"
@@ -57,6 +59,7 @@ print(df.head())
 # Creating the target column
 # df['absolute_perc_dev'] = (df['Minuten afwijkend'].abs() / df['Booked']) * 100
 df['perc_dev'] = ((df['Minuten onderplanning'] - df['Minuten overplanning']) / df['Booked']) * 100
+# df['perc_dev'] = df['Duur kamer'] / df['Booked']
 df['deviation'] = df['Duur kamer'] - df['Booked']
 # df['percentage_deviation'] = (df['Duur kamer'] - df['Booked']) / df['Booked'] * 100
 df['has_delay'] = df['deviation'] > 10 # True if deviation is greater than 10%
@@ -138,6 +141,34 @@ print("Engineered data sample:")
 print(df.head())
 print(describe(df))
 original_df = df.copy()
+
+# Example function for imputing missing 'Minuten' value
+def impute_minuten(row):
+    if row['Minuten overplanning'] == 0 and row['Minuten onderplanning'] == 0:
+        if row['Over-/onderplanning'] == 'Overplanning':
+            pct = np.random.uniform(1.00, 1.10)
+        elif row['Over-/onderplanning'] == 'Onderplanning':
+            pct = np.random.uniform(0.90, 1.00)
+        else:
+            return row["Duur kamer"]  # handle unexpected values
+
+        return row['Duur kamer'] * pct  # full new value
+    else:
+        return row['Duur kamer']  # keep as is
+
+
+# Apply the function
+df['test'] = df.apply(impute_minuten, axis=1)
+
+# Calculate the deviation
+df['test_deviation'] = df['test'] - df['Booked']
+
+df["test_perc_dev"] = ((df['test'] - df['Booked']) / df['Booked']) * 100
+
+print("Original data sample:")
+
+# Another test
+df['latest_test'] = df['Duur kamer'] / df['Booked']
 
 
 # --------------------------------------------------
@@ -312,6 +343,19 @@ if not global_filter:
     # dunn_results = mc.tukeyhsd()
     dunn_results = sp.posthoc_dunn(df_subspecialities,val_col=target_col, group_col='Specialisme', p_adjust='bonferroni') # or 'holm', 'fdr_bh', etc))
     print(dunn_results)
+    alpha = 0.05
+    print("\nSignificant pairwise comparisons (p < 0.05):")
+    significant_pairs = []
+
+    for i in range(len(dunn_results.index)):
+        for j in range(i + 1, len(dunn_results.columns)):
+            p_val = dunn_results.iloc[i, j]
+            if p_val < alpha:
+                pair = (dunn_results.index[i], dunn_results.columns[j])
+                significant_pairs.append((pair, p_val))
+
+    for pair, p_val in significant_pairs:
+        print(f"{pair[0]} vs. {pair[1]}: p = {p_val:.4f}")
 
     """
     # Plotting the results
@@ -685,3 +729,69 @@ print(dunn_results)
 
 
 print("End of script")
+
+
+############################################################
+# Start: Visualizations NOT IMPUTED DATA
+############################################################
+plt.style.use('science')
+
+plt.figure(figsize=(12, 6))
+sns.histplot(df["deviation"], bins=80, kde=True)
+plt.title(f'Distribution of deviation')
+plt.xlabel("Absolute deviation")
+plt.ylabel('Frequency')
+plt.grid()
+plt.tight_layout()
+plt.show()
+
+# plotting the distribution of the target column
+plt.figure(figsize=(12, 6))
+sns.histplot(df[target_col], bins=30, kde=True)
+plt.title(f'Distribution of realtive deviation')
+plt.xlabel(target_col)
+plt.ylabel('Frequency')
+plt.grid()
+plt.tight_layout()
+plt.show()
+
+
+############################################################
+# Start: Visualizations: IMPUTED DATA
+############################################################
+
+
+plt.figure(figsize=(12, 6))
+sns.histplot(df["test_deviation"], bins=100, kde=True)
+plt.title(f'Distribution of deviation')
+plt.xlabel("Absolute deviation (Imputed)")
+plt.ylabel('Frequency')
+plt.grid()
+plt.tight_layout()
+plt.show()
+
+plt.figure(figsize=(12, 6))
+sns.histplot(df["test_perc_dev"], bins=100, kde=True)
+plt.title(f'Distribution of deviation')
+plt.xlabel("Normalized deviation (IMPUTED)")
+plt.ylabel('Frequency')
+plt.grid()
+plt.tight_layout()
+plt.show()
+
+
+
+# ---------------------------------------
+# plotting distribbution of target across subspecialties (violin plot)
+plt.figure(figsize=(12, 6))
+sns.violinplot(x='Specialisme', y=target_col, data=df, inner='quartile')
+plt.title(f'Distribution of {target_col} by Specialisme')
+plt.xlabel('Specialisme')
+plt.ylabel(target_col)
+plt.xticks(rotation=45)
+plt.grid()
+plt.tight_layout()
+plt.show()
+
+
+
